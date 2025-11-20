@@ -1,0 +1,69 @@
+{
+  "companies_score": [
+    {
+      "name": "value",
+      "value": 3,
+      "description": "Does the company pay a good, reliable and sustainable dividend?",
+      "section": [
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "name": "future",
+      "value": 7,
+      "description": "How is the company forecast to perform in the next 1-3 years?",
+      "section": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "past",
+      "value": 5,
+      "description": "Does the company have strong financial health and manageable debt?",
+      "section": [
+        false,
+        true,
+        true,
+        true,
+        false,
+        true
+      ]
+    },
+    {
+      "name": "health",
+      "value": 7,
+      "description": "How has the company performed over the past 5 years?",
+      "section": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "dividend",
+      "value": 1,
+      "description": "Is the company undervalued compared to its peers, industry and forecasted cash flows?",
+      "section": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  ]
+}
