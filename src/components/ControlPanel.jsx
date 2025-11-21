@@ -63,6 +63,9 @@ export default memo(ControlPanel, (prevProps, nextProps) => {
   return (
     prevProps.dimensions === nextProps.dimensions &&
     JSON.stringify(prevProps.scores) === JSON.stringify(nextProps.scores) &&
-    prevProps.highlightSection === nextProps.highlightSection
+    prevProps.highlightSection === nextProps.highlightSection &&
+    prevProps.onScoreChange === nextProps.onScoreChange &&
+    prevProps.onHighlightChange === nextProps.onHighlightChange &&
+    prevProps.handleReset === nextProps.handleReset
   );
 });
