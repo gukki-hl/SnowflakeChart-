@@ -1,6 +1,7 @@
 import { HStack, Text, Box, VStack } from "@chakra-ui/react";
 import Sliders from "./Sliders";
 import { memo } from "react";
+import { shallowArrayEqual } from "../constants";
 
 const ScoresRadio = ({ dimensions, scores, onScoreChange }) => {
   return (
@@ -38,6 +39,6 @@ const ScoresRadio = ({ dimensions, scores, onScoreChange }) => {
 export default memo(ScoresRadio, (prevProps, nextProps) => {
   return (
     prevProps.dimensions === nextProps.dimensions &&
-    JSON.stringify(prevProps.scores) === JSON.stringify(nextProps.scores)
+    shallowArrayEqual(prevProps.scores, nextProps.scores)
   );
 });

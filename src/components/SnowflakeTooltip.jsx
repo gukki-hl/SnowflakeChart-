@@ -1,21 +1,12 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import TooltipMessage from "./Tooltipmessage";
 import SnowflakeCanvas from "./SnowflakeCanvas";
-
 import { Box } from "@chakra-ui/react";
-
-// Canvas 配置常量
-const CANVAS_CONFIG = {
-  CENTER_X: 165, // Canvas 中心点 X 坐标
-  CENTER_Y: 165, // Canvas 中心点 Y 坐标
-  OUTER_RADIUS: 120, // 雪花图外圈半径
-  INNER_RADIUS: 17, // 雪花图内圈半径（用于判断点击区域）
-  CANVAS_WIDTH: 330, // Canvas 宽度
-  CANVAS_HEIGHT: 330, // Canvas 高度
-};
-
-// 节流配置
-const THROTTLE_DELAY = 16; // 节流延迟时间（ms），约 60fps
+import {
+  CANVAS_CONFIG,
+  DEFAULT_VALUES,
+  PERFORMANCE_CONFIG,
+} from "../constants";
 
 // 节流函数：限制高频事件触发频率（性能优化）
 const throttle = (func, delay) => {
@@ -29,13 +20,6 @@ const throttle = (func, delay) => {
   };
 };
 
-// 默认 offset 常量，避免每次渲染创建新对象（性能优化）
-const DEFAULT_OFFSET = { mainAxis: -165, crossAxis: 0 };
-// 默认悬浮状态常量
-const DEFAULT_HOVERED_SECTION = -1;
-// 默认检查项数量
-const DEFAULT_TOTAL_CHECKS = 6;
-
 const SnowflakeTooltip = ({
   dimensions,
   scores,
@@ -45,7 +29,9 @@ const SnowflakeTooltip = ({
   highlightSection,
 }) => {
   const canvasRef = useRef(null);
-  const [hoveredSection, setHoveredSection] = useState(DEFAULT_HOVERED_SECTION);
+  const [hoveredSection, setHoveredSection] = useState(
+    DEFAULT_VALUES.HOVERED_SECTION
+  );
 
   // 计算当前悬浮维度的检查通过数量
   const getChecksCount = useCallback(
@@ -130,7 +116,7 @@ const SnowflakeTooltip = ({
             crossAxis: sectorMidY - CENTER_Y,
           };
         default:
-          return DEFAULT_OFFSET;
+          return DEFAULT_VALUES.OFFSET;
       }
     },
     [dimensions, getTooltipPlacement]
@@ -185,17 +171,14 @@ const SnowflakeTooltip = ({
       if (newHoveredSection !== hoveredSection) {
         setHoveredSection(newHoveredSection);
         canvas.style.cursor = newHoveredSection !== -1 ? "pointer" : "default";
-
-        // 调试信息：显示当前悬浮的维度及其 Tooltip 配置
-        if (newHoveredSection !== -1) {
-          console.log("悬浮维度索引:", newHoveredSection);
-          console.log("维度名称:", dimensions[newHoveredSection]);
-        }
       }
     };
 
     // 节流优化：约 60fps
-    const handleMouseMove = throttle(handleMouseMoveLogic, THROTTLE_DELAY);
+    const handleMouseMove = throttle(
+      handleMouseMoveLogic,
+      PERFORMANCE_CONFIG.THROTTLE_DELAY
+    );
 
     // 鼠标离开时重置悬浮状态
     const handleMouseLeave = () => {
@@ -223,7 +206,8 @@ const SnowflakeTooltip = ({
       dimension: dimensions[hoveredSection],
       description: descriptions[hoveredSection],
       checksCount: getChecksCount(hoveredSection),
-      totalChecks: sections[hoveredSection]?.length || DEFAULT_TOTAL_CHECKS,
+      totalChecks:
+        sections[hoveredSection]?.length || DEFAULT_VALUES.TOTAL_CHECKS,
       checks: sections[hoveredSection] || [],
       placement: getTooltipPlacement(hoveredSection),
       offset: getTooltipOffset(hoveredSection),
@@ -244,10 +228,10 @@ const SnowflakeTooltip = ({
       dimension={hoveredData?.dimension || ""}
       description={hoveredData?.description || ""}
       checksCount={hoveredData?.checksCount || 0}
-      totalChecks={hoveredData?.totalChecks || DEFAULT_TOTAL_CHECKS}
+      totalChecks={hoveredData?.totalChecks || DEFAULT_VALUES.TOTAL_CHECKS}
       checks={hoveredData?.checks || []}
       placement={hoveredData?.placement || "bottom"}
-      offset={hoveredData?.offset || DEFAULT_OFFSET}
+      offset={hoveredData?.offset || DEFAULT_VALUES.OFFSET}
       isOpen={mode === "COMPANY" && hoveredSection !== -1}
     >
       <Box display="inline-block">

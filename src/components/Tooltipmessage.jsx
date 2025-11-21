@@ -1,5 +1,6 @@
 import { HStack, Text, Box, Tooltip } from "@chakra-ui/react";
 import { memo } from "react";
+import { shallowArrayEqual } from "../constants";
 const TooltipContent = ({
   score,
   dimension,
@@ -94,7 +95,7 @@ const MemoizedTooltipContent = memo(
     prevProps.description === nextProps.description &&
     prevProps.checksCount === nextProps.checksCount &&
     prevProps.totalChecks === nextProps.totalChecks &&
-    JSON.stringify(prevProps.checks) === JSON.stringify(nextProps.checks)
+    shallowArrayEqual(prevProps.checks, nextProps.checks)
 );
 
 const TooltipMessage = ({

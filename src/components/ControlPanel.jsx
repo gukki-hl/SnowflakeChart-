@@ -2,6 +2,7 @@ import { Box, VStack, Text, Button } from "@chakra-ui/react";
 import { memo } from "react";
 import ScoresRadio from "./ScoresRadio";
 import HighlightSection from "./HighlightSection";
+import { shallowArrayEqual } from "../constants";
 const ControlPanel = ({
   dimensions,
   scores,
@@ -62,7 +63,7 @@ const ControlPanel = ({
 export default memo(ControlPanel, (prevProps, nextProps) => {
   return (
     prevProps.dimensions === nextProps.dimensions &&
-    JSON.stringify(prevProps.scores) === JSON.stringify(nextProps.scores) &&
+    shallowArrayEqual(prevProps.scores, nextProps.scores) &&
     prevProps.highlightSection === nextProps.highlightSection &&
     prevProps.onScoreChange === nextProps.onScoreChange &&
     prevProps.onHighlightChange === nextProps.onHighlightChange &&
