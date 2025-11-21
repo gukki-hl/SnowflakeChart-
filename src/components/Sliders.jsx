@@ -1,12 +1,19 @@
 import { Box, HStack, Text, Slider, NumberInput } from "@chakra-ui/react";
-import { useState } from "react";
+import { useCallback, useState, memo } from "react";
 
 const Sliders = ({ labelName, score, onScoreChange }) => {
+  //悬浮状态
   const [isHovered, setIsHovered] = useState(false);
+  //分数变化回调
+  const handleSliderChange = useCallback(
+    (newValue) => {
+      onScoreChange(newValue);
+    },
+    [onScoreChange] //依赖项
+  );
 
-  const handleSliderChange = (newValue) => {
-    onScoreChange(newValue);
-  };
+  const handleMouseEnter = useCallback(() => setIsHovered(true), []);
+  const handleMouseLeave = useCallback(() => setIsHovered(false), []);
 
   return (
     <Box
@@ -37,8 +44,8 @@ const Sliders = ({ labelName, score, onScoreChange }) => {
           display="flex"
           alignItems="center"
           justifyContent="flex-start"
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
           _hover={{ borderColor: "purple.500" }}
           onValueChange={(e) => handleSliderChange(e.value)}
         >
@@ -80,4 +87,11 @@ const Sliders = ({ labelName, score, onScoreChange }) => {
   );
 };
 
-export default Sliders;
+//使用memo优化，避免父组件重复渲染时不必要的重复渲染
+export default memo(Sliders, (prevProps, nextProps) => {
+  return (
+    prevProps.labelName === nextProps.labelName &&
+    prevProps.score === nextProps.score &&
+    prevProps.onScoreChange === nextProps.onScoreChange
+  );
+});
