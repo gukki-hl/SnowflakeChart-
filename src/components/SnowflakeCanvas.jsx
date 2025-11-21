@@ -1,4 +1,10 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import {
+  useEffect,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+  useCallback,
+} from "react";
 
 // 计算三次贝塞尔曲线的两个控制点
 const calculateControlPoints = (
@@ -75,6 +81,16 @@ const drawBezierSnowflake = (context, points, angles, snowflakeColor) => {
   context.stroke();
 };
 
+// 雪花图canvas配置
+const CANVAS_CONFIG = {
+  centerX: 165, //canvas中心点
+  centerY: 165, //canvas中心点
+  outerRadius: 120, //雪花图外圈半径
+  canvasWidth: 330, //canvas宽度
+  canvasHeight: 330, //canvas高度
+};
+
+// 使用 forwardRef 让父组件可以通过 ref 访问到 SnowflakeCanvas 内部的 canvas 元素，方便实现如坐标映射、悬浮事件处理等交互。
 const SnowflakeCanvas = forwardRef(
   (
     {
@@ -84,50 +100,102 @@ const SnowflakeCanvas = forwardRef(
       highlightSection,
       hoveredSection, // 由外部交互层控制
     },
-    ref
+    ref //父组件传递的 ref
   ) => {
+    // 创建 ref 用于存储 canvas 元素
     const canvasRef = useRef(null);
+    // 创建 ref 用于存储基础层 canvas 元素
+    const baseLayerRef = useRef(null);
 
     // 把内部 canvas DOM 暴露给父组件（交互层）
+    // useImperativeHandle 是 React 提供的一个钩子函数，用于在组件内部暴露一些方法或属性给父组件。
+    // 在这里，它将 canvasRef.current 暴露给父组件，使得父组件可以直接访问到内部的 canvas 元素。
     useImperativeHandle(ref, () => canvasRef.current);
 
+    // 绘制交互层（高频更新）
+    const renderInteractionLayer = useCallback(() => {
+      const canvas = canvasRef.current;
+      if (!canvas || !baseLayerRef.current) return;
+
+      // 🔧 TOC 模式下不需要交互层
+      if (mode === "TOC") return;
+
+      const ctx = canvas.getContext("2d");
+      const { centerX, centerY, outerRadius } = CANVAS_CONFIG;
+      const numDimensions = dimensions.length;
+
+      // 清空画布并绘制基础层
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(baseLayerRef.current, 0, 0);
+
+      // 只绘制悬浮高亮（COMPANY 模式）
+      if (mode === "COMPANY" && hoveredSection !== -1) {
+        const anglePerDimension = (Math.PI * 2) / numDimensions;
+        const halfAngle = anglePerDimension / 2;
+        const centerAngle = hoveredSection * anglePerDimension - Math.PI / 2;
+        const startAngle = centerAngle - halfAngle;
+        const endAngle = centerAngle + halfAngle;
+
+        // 绘制悬浮扇形的白色半透明填充
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(
+          centerX + outerRadius * Math.cos(startAngle),
+          centerY + outerRadius * Math.sin(startAngle)
+        );
+        ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
+        ctx.lineTo(centerX, centerY);
+        ctx.closePath();
+        ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+        ctx.fill();
+        ctx.restore();
+      }
+    }, [dimensions.length, mode, hoveredSection]);
+
+    // useEffect 1: 绘制基础层（低频更新）
     useEffect(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
+      //主画布层
       const ctx = canvas.getContext("2d");
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const centerX = 165;
-      const centerY = 165;
-      const outerRadius = 120;
+      const { centerX, centerY, outerRadius } = CANVAS_CONFIG;
       const numDimensions = dimensions.length;
+
+      // 创建离屏 Canvas 缓存基础层
+      if (!baseLayerRef.current) {
+        baseLayerRef.current = document.createElement("canvas");
+        baseLayerRef.current.width = canvas.width;
+        baseLayerRef.current.height = canvas.height;
+      }
+      const baseCtx = baseLayerRef.current.getContext("2d"); //获取基础层canvas上下文
+      baseCtx.clearRect(0, 0, canvas.width, canvas.height); //清除基础层
 
       // 1. 画7个同心圆
       for (let i = 7; i >= 1; i--) {
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, i * 17, 0, Math.PI * 2);
-        ctx.fillStyle = i % 2 === 0 ? "#424B58" : "#2D3642";
-        if (i === 1) ctx.fillStyle = "#424B58";
-        ctx.fill();
+        baseCtx.beginPath();
+        baseCtx.arc(centerX, centerY, i * 17, 0, Math.PI * 2);
+        baseCtx.fillStyle = i % 2 === 0 ? "#424B58" : "#2D3642";
+        if (i === 1) baseCtx.fillStyle = "#424B58";
+        baseCtx.fill();
       }
 
       // 2. 画参考线（从圆心到最外圈）
       for (let i = 0; i < numDimensions; i++) {
         const angle = (i * (Math.PI * 2)) / numDimensions - Math.PI / 2;
-
         const startRadius = 34;
         const startX = centerX + startRadius * Math.cos(angle);
         const startY = centerY + startRadius * Math.sin(angle);
         const endX = centerX + outerRadius * Math.cos(angle);
         const endY = centerY + outerRadius * Math.sin(angle);
 
-        ctx.beginPath();
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(endX, endY);
-        ctx.strokeStyle = "#424B58";
-        ctx.lineWidth = 5;
-        ctx.stroke();
+        baseCtx.beginPath();
+        baseCtx.moveTo(startX, startY);
+        baseCtx.lineTo(endX, endY);
+        baseCtx.strokeStyle = "#424B58";
+        baseCtx.lineWidth = 5;
+        baseCtx.stroke();
       }
 
       // 3. 计算所有数据点和角度
@@ -150,30 +218,27 @@ const SnowflakeCanvas = forwardRef(
       const snowflakeColor = calculateColor(totalScore, numDimensions);
 
       // 5. 用三次贝塞尔曲线绘制雪花图
-      drawBezierSnowflake(ctx, points, angles, snowflakeColor);
+      drawBezierSnowflake(baseCtx, points, angles, snowflakeColor);
 
-      // 6. COMPANY 模式：绘制悬浮高亮扇形
-      if (mode === "COMPANY" && hoveredSection !== -1) {
-        const anglePerDimension = (Math.PI * 2) / numDimensions;
-        const halfAngle = anglePerDimension / 2;
-        const centerAngle = hoveredSection * anglePerDimension - Math.PI / 2;
-        const startAngle = centerAngle - halfAngle;
-        const endAngle = centerAngle + halfAngle;
+      // 6. 画旋转的标签
+      for (let i = 0; i < numDimensions; i++) {
+        const angle = angles[i];
+        const labelX = centerX + (outerRadius + 20) * Math.cos(angle);
+        const labelY = centerY + (outerRadius + 20) * Math.sin(angle);
 
-        // 绘制悬浮扇形的白色半透明填充
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(centerX, centerY);
-        ctx.lineTo(
-          centerX + outerRadius * Math.cos(startAngle),
-          centerY + outerRadius * Math.sin(startAngle)
-        );
-        ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
-        ctx.lineTo(centerX, centerY);
-        ctx.closePath();
-        ctx.fillStyle = "rgba(255, 255, 255, 0.1)"; // 白色半透明
-        ctx.fill();
-        ctx.restore();
+        baseCtx.save();
+        baseCtx.translate(labelX, labelY);
+        let textAngle = angle + Math.PI / 2;
+        if (i === 2 || i === 3) {
+          textAngle += Math.PI;
+        }
+        baseCtx.rotate(textAngle);
+        baseCtx.fillStyle = "white";
+        baseCtx.font = "12px Arial";
+        baseCtx.textAlign = "center";
+        baseCtx.textBaseline = "middle";
+        baseCtx.fillText(dimensions[i], 0, 0);
+        baseCtx.restore();
       }
 
       // 7. TOC 模式：绘制高亮扇形
@@ -279,30 +344,14 @@ const SnowflakeCanvas = forwardRef(
         ctx.drawImage(offscreenCanvas, 0, 0);
       }
 
-      // 8. 画旋转的标签
-      for (let i = 0; i < numDimensions; i++) {
-        const angle = angles[i];
+      // 初始渲染交互层
+      renderInteractionLayer();
 
-        const labelX = centerX + (outerRadius + 20) * Math.cos(angle);
-        const labelY = centerY + (outerRadius + 20) * Math.sin(angle);
+    }, [dimensions, scores, mode, highlightSection, renderInteractionLayer]);
 
-        ctx.save();
-        ctx.translate(labelX, labelY);
-
-        let textAngle = angle + Math.PI / 2;
-        if (i === 2 || i === 3) {
-          textAngle += Math.PI;
-        }
-        ctx.rotate(textAngle);
-
-        ctx.fillStyle = "white";
-        ctx.font = "12px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(dimensions[i], 0, 0);
-        ctx.restore();
-      }
-    }, [dimensions, scores, mode, highlightSection, hoveredSection]);
+    useEffect(() => {
+      renderInteractionLayer();
+    }, [renderInteractionLayer]);
 
     return (
       <canvas
