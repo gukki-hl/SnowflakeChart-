@@ -246,6 +246,11 @@ const SnowflakeCanvas = forwardRef(
         const highlightIndex = dimensions.indexOf(highlightSection);
         if (highlightIndex === -1) return;
 
+        // 清空画布并绘制基础层
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // 绘制基础层
+        ctx.drawImage(baseLayerRef.current, 0, 0);
+
         const scaleFactor = 1.05; //放大 1.05 倍
         const anglePerDimension = (Math.PI * 2) / numDimensions;
         const halfAngle = anglePerDimension / 2;
@@ -346,7 +351,6 @@ const SnowflakeCanvas = forwardRef(
 
       // 初始渲染交互层
       renderInteractionLayer();
-
     }, [dimensions, scores, mode, highlightSection, renderInteractionLayer]);
 
     useEffect(() => {
