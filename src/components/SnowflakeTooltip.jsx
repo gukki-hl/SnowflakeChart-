@@ -219,8 +219,7 @@ const SnowflakeTooltip = ({
       checks: sections[hoveredSection] || [],
       placement: getTooltipPlacement(hoveredSection),
       offset: getTooltipOffset(hoveredSection),
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }; // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     hoveredSection, //悬浮的维度索引
     scores, //维度分数
