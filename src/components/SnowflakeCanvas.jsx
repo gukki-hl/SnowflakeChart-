@@ -352,6 +352,19 @@ const SnowflakeCanvas = forwardRef(
 
       // 初始渲染交互层
       renderInteractionLayer();
+
+      // 清理函数：组件卸载时清空 Canvas
+      return () => {
+        if (canvasRef.current) {
+          const ctx = canvasRef.current.getContext("2d");
+          ctx.clearRect(
+            0,
+            0,
+            CANVAS_CONFIG.canvasWidth,
+            CANVAS_CONFIG.canvasHeight
+          );
+        }
+      };
     }, [dimensions, scores, mode, highlightSection, renderInteractionLayer]);
 
     useEffect(() => {

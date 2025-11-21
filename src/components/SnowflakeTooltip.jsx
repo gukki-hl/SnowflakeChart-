@@ -1,7 +1,23 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import TooltipMessage from "./Tooltipmessage";
 import SnowflakeCanvas from "./SnowflakeCanvas";
+
 import { Box } from "@chakra-ui/react";
+
+// 节流函数：限制高频事件触发频率（性能优化）
+const throttle = (func, delay) => {
+  let lastCall = 0;
+  return (...args) => {
+    const now = Date.now();
+    if (now - lastCall >= delay) {
+      lastCall = now;
+      func(...args);
+    }
+  };
+};
+
+// 默认 offset 常量，避免每次渲染创建新对象（性能优化）
+const DEFAULT_OFFSET = { mainAxis: -165, crossAxis: 0 };
 
 const SnowflakeTooltip = ({
   dimensions,
@@ -143,8 +159,8 @@ const SnowflakeTooltip = ({
       return angle >= sectorStartAngle && angle < sectorEndAngle;
     };
 
-    // 鼠标移动时更新悬浮状态
-    const handleMouseMove = (event) => {
+    // 鼠标移动时更新悬浮状态（原始逻辑）
+    const handleMouseMoveLogic = (event) => {
       const rect = canvas.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
@@ -169,6 +185,9 @@ const SnowflakeTooltip = ({
         }
       }
     };
+
+    // 节流优化：每 16ms（约 60fps）最多执行一次
+    const handleMouseMove = throttle(handleMouseMoveLogic, 16);
 
     // 鼠标离开时重置悬浮状态
     const handleMouseLeave = () => {
@@ -221,7 +240,7 @@ const SnowflakeTooltip = ({
       totalChecks={hoveredData?.totalChecks || 6}
       checks={hoveredData?.checks || []}
       placement={hoveredData?.placement || "bottom"}
-      offset={hoveredData?.offset || { mainAxis: -165, crossAxis: 0 }}
+      offset={hoveredData?.offset || DEFAULT_OFFSET}
       isOpen={mode === "COMPANY" && hoveredSection !== -1}
     >
       <Box display="inline-block">
