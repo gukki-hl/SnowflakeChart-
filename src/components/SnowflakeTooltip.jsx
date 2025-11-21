@@ -4,6 +4,19 @@ import SnowflakeCanvas from "./SnowflakeCanvas";
 
 import { Box } from "@chakra-ui/react";
 
+// Canvas 配置常量
+const CANVAS_CONFIG = {
+  CENTER_X: 165, // Canvas 中心点 X 坐标
+  CENTER_Y: 165, // Canvas 中心点 Y 坐标
+  OUTER_RADIUS: 120, // 雪花图外圈半径
+  INNER_RADIUS: 17, // 雪花图内圈半径（用于判断点击区域）
+  CANVAS_WIDTH: 330, // Canvas 宽度
+  CANVAS_HEIGHT: 330, // Canvas 高度
+};
+
+// 节流配置
+const THROTTLE_DELAY = 16; // 节流延迟时间（ms），约 60fps
+
 // 节流函数：限制高频事件触发频率（性能优化）
 const throttle = (func, delay) => {
   let lastCall = 0;
@@ -18,6 +31,10 @@ const throttle = (func, delay) => {
 
 // 默认 offset 常量，避免每次渲染创建新对象（性能优化）
 const DEFAULT_OFFSET = { mainAxis: -165, crossAxis: 0 };
+// 默认悬浮状态常量
+const DEFAULT_HOVERED_SECTION = -1;
+// 默认检查项数量
+const DEFAULT_TOTAL_CHECKS = 6;
 
 const SnowflakeTooltip = ({
   dimensions,
@@ -28,7 +45,7 @@ const SnowflakeTooltip = ({
   highlightSection,
 }) => {
   const canvasRef = useRef(null);
-  const [hoveredSection, setHoveredSection] = useState(-1);
+  const [hoveredSection, setHoveredSection] = useState(DEFAULT_HOVERED_SECTION);
 
   // 计算当前悬浮维度的检查通过数量
   const getChecksCount = useCallback(
@@ -60,23 +77,20 @@ const SnowflakeTooltip = ({
   // 计算每个维度的 Tooltip offset，使箭头指向正确位置
   const getTooltipOffset = useCallback(
     (sectionIndex) => {
-      const centerX = 165; // canvas中心点
-      const centerY = 165; // canvas中心点
-      const outerRadius = 120; // 雪花图外圈半径
-      const canvasWidth = 330; // canvas宽度
-      const canvasHeight = 330; // canvas高度
-      const numDimensions = dimensions.length; // 维度数量
+      const { CENTER_X, CENTER_Y, OUTER_RADIUS, CANVAS_WIDTH, CANVAS_HEIGHT } =
+        CANVAS_CONFIG;
+      const numDimensions = dimensions.length;
 
       // 计算扇形的中心角度（弧度）
       const angle =
         (sectionIndex * (Math.PI * 2)) / numDimensions - Math.PI / 2;
 
       // 扇形一半位置的半径（从圆心到外圈距离的一半）
-      const midRadius = outerRadius / 2; // 60px
+      const midRadius = OUTER_RADIUS / 2;
 
       // 扇形中点的绝对坐标（在 canvas 上的位置）
-      const sectorMidX = centerX + midRadius * Math.cos(angle);
-      const sectorMidY = centerY + midRadius * Math.sin(angle);
+      const sectorMidX = CENTER_X + midRadius * Math.cos(angle);
+      const sectorMidY = CENTER_Y + midRadius * Math.sin(angle);
 
       const placement = getTooltipPlacement(sectionIndex);
 
@@ -85,42 +99,38 @@ const SnowflakeTooltip = ({
       switch (placement) {
         case "bottom":
           // placement="bottom" 表示 Tooltip 在下方，箭头向上
-          // 默认箭头位置: (centerX, canvasHeight) = (165, 330)
           if (sectionIndex === 0) {
-            // value: 箭头指向 canvas 中心 (165, 165)
+            // value: 箭头指向 canvas 中心
             return {
-              mainAxis: centerY - canvasHeight, // 165 - 330 = -165
+              mainAxis: CENTER_Y - CANVAS_HEIGHT,
               crossAxis: 0, // 水平居中
             };
           } else {
             // future (1) 和 past (2): 箭头指向各自扇形中点
             return {
-              mainAxis: sectorMidY - canvasHeight, // 扇形中点Y - 330
-              crossAxis: sectorMidX - centerX, // 扇形中点X - 165
+              mainAxis: sectorMidY - CANVAS_HEIGHT,
+              crossAxis: sectorMidX - CENTER_X,
             };
           }
         case "top":
           // placement="top" 表示 Tooltip 在上方，箭头向下
-          // 默认箭头位置: (centerX, 0) = (165, 0)
           // health (3) 和 dividend (4): 箭头指向各自扇形中点
           return {
-            mainAxis: -sectorMidY, // 0 - 扇形中点Y（向下是正方向，所以取负）
-            crossAxis: sectorMidX - centerX, // 扇形中点X - 165
+            mainAxis: -sectorMidY,
+            crossAxis: sectorMidX - CENTER_X,
           };
         case "right":
-          // 保留旧逻辑（如果需要）
           return {
-            mainAxis: sectorMidX - canvasWidth,
-            crossAxis: sectorMidY - centerY,
+            mainAxis: sectorMidX - CANVAS_WIDTH,
+            crossAxis: sectorMidY - CENTER_Y,
           };
         case "left":
-          // 保留旧逻辑（如果需要）
           return {
             mainAxis: -sectorMidX,
-            crossAxis: sectorMidY - centerY,
+            crossAxis: sectorMidY - CENTER_Y,
           };
         default:
-          return { mainAxis: -165, crossAxis: 0 };
+          return DEFAULT_OFFSET;
       }
     },
     [dimensions, getTooltipPlacement]
@@ -131,19 +141,17 @@ const SnowflakeTooltip = ({
     const canvas = canvasRef.current;
     if (!canvas || mode !== "COMPANY") return;
 
-    const centerX = 165;
-    const centerY = 165;
-    const outerRadius = 120;
+    const { CENTER_X, CENTER_Y, OUTER_RADIUS, INNER_RADIUS } = CANVAS_CONFIG;
     const numDimensions = dimensions.length;
 
     // 判断点是否在扇形内
     const isPointInSector = (x, y, sectorIndex) => {
-      const dx = x - centerX;
-      const dy = y - centerY;
+      const dx = x - CENTER_X;
+      const dy = y - CENTER_Y;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
       // 检查是否在圆形范围内
-      if (distance > outerRadius || distance < 17) return false;
+      if (distance > OUTER_RADIUS || distance < INNER_RADIUS) return false;
 
       // 计算点相对于圆心的角度
       let angle = Math.atan2(dy, dx);
@@ -186,8 +194,8 @@ const SnowflakeTooltip = ({
       }
     };
 
-    // 节流优化：每 16ms（约 60fps）最多执行一次
-    const handleMouseMove = throttle(handleMouseMoveLogic, 16);
+    // 节流优化：约 60fps
+    const handleMouseMove = throttle(handleMouseMoveLogic, THROTTLE_DELAY);
 
     // 鼠标离开时重置悬浮状态
     const handleMouseLeave = () => {
@@ -215,7 +223,7 @@ const SnowflakeTooltip = ({
       dimension: dimensions[hoveredSection],
       description: descriptions[hoveredSection],
       checksCount: getChecksCount(hoveredSection),
-      totalChecks: sections[hoveredSection]?.length || 6,
+      totalChecks: sections[hoveredSection]?.length || DEFAULT_TOTAL_CHECKS,
       checks: sections[hoveredSection] || [],
       placement: getTooltipPlacement(hoveredSection),
       offset: getTooltipOffset(hoveredSection),
@@ -236,7 +244,7 @@ const SnowflakeTooltip = ({
       dimension={hoveredData?.dimension || ""}
       description={hoveredData?.description || ""}
       checksCount={hoveredData?.checksCount || 0}
-      totalChecks={hoveredData?.totalChecks || 6}
+      totalChecks={hoveredData?.totalChecks || DEFAULT_TOTAL_CHECKS}
       checks={hoveredData?.checks || []}
       placement={hoveredData?.placement || "bottom"}
       offset={hoveredData?.offset || DEFAULT_OFFSET}

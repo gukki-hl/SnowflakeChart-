@@ -33,15 +33,11 @@ const calculateControlPoints = (
 
 // 根据总分计算颜色
 const calculateColor = (totalScore, numDimensions) => {
-  const maxScore = numDimensions * 7;
+  const maxScore = numDimensions * DRAW_CONFIG.maxScore;
   const normalized = Math.max(0, Math.min(totalScore / maxScore, 1));
 
-  const hueStart = 0;
-  const hueEnd = 100;
+  const { hueStart, hueEnd, saturation, lightness } = COLOR_GRADIENT;
   const hue = hueStart + (hueEnd - hueStart) * normalized;
-
-  const saturation = 100;
-  const lightness = 55;
 
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 };
@@ -66,7 +62,7 @@ const drawBezierSnowflake = (context, points, angles, snowflakeColor) => {
       next.y,
       currentAngle,
       nextAngle,
-      0.3
+      STYLE_CONFIG.bezierTension
     );
 
     context.bezierCurveTo(cp1X, cp1Y, cp2X, cp2Y, next.x, next.y);
@@ -75,20 +71,59 @@ const drawBezierSnowflake = (context, points, angles, snowflakeColor) => {
   context.closePath();
   context.fillStyle = snowflakeColor
     .replace("hsl", "hsla")
-    .replace(")", ", 0.7)");
+    .replace(")", `, ${STYLE_CONFIG.snowflakeOpacity})`);
   context.fill();
   context.strokeStyle = snowflakeColor;
-  context.lineWidth = 1;
+  context.lineWidth = STYLE_CONFIG.strokeWidth;
   context.stroke();
 };
 
-// 雪花图canvas配置
+// 颜色渐变配置
+const COLOR_GRADIENT = {
+  hueStart: 0, // 起始色相（红色）
+  hueEnd: 100, // 结束色相（黄绿色）
+  saturation: 100, // 饱和度
+  lightness: 55, // 亮度
+};
+
+// Canvas 配置常量
 const CANVAS_CONFIG = {
-  centerX: 165, //canvas中心点
-  centerY: 165, //canvas中心点
-  outerRadius: 120, //雪花图外圈半径
-  canvasWidth: 330, //canvas宽度
-  canvasHeight: 330, //canvas高度
+  centerX: 165, // Canvas 中心点 X 坐标
+  centerY: 165, // Canvas 中心点 Y 坐标
+  outerRadius: 120, // 雪花图外圈半径
+  canvasWidth: 330, // Canvas 宽度
+  canvasHeight: 330, // Canvas 高度
+};
+
+// 绘制配置常量
+const DRAW_CONFIG = {
+  circleCount: 7, // 同心圆数量
+  circleRadiusMultiplier: 17, // 同心圆半径倍数
+  startRadius: 34, // 参考线起始半径
+  labelOffset: 20, // 标签距离外圈的偏移
+  lineWidth: 5, // 参考线宽度
+  maxScore: 7, // 单个维度最大分数
+  scaleFactor: 1.05, // TOC 模式放大倍数
+  sectorMidRadiusFactor: 0.5, // 扇形中点半径因子
+};
+
+// 颜色配置常量
+const COLOR_CONFIG = {
+  circleEven: "#424B58", // 偶数圆颜色
+  circleOdd: "#2D3642", // 奇数圆颜色
+  referenceLine: "#424B58", // 参考线颜色
+  labelColor: "white", // 标签颜色
+  hoverHighlight: "rgba(255, 255, 255, 0.1)", // 悬浮高亮颜色
+  tocMask: "rgba(0, 0, 0, 0.5)", // TOC 蒙版颜色
+  tocMaskClear: "rgba(0, 0, 0, 1)", // TOC 蒙版清除颜色
+};
+
+// 样式配置常量
+const STYLE_CONFIG = {
+  labelFont: "12px Arial", // 标签字体
+  snowflakeOpacity: 0.7, // 雪花图透明度
+  bezierTension: 0.3, // 贝塞尔曲线张力
+  strokeWidth: 1, // 雪花图描边宽度
 };
 
 // 使用 forwardRef 让父组件可以通过 ref 访问到 SnowflakeCanvas 内部的 canvas 元素，方便实现如坐标映射、悬浮事件处理等交互。
@@ -148,7 +183,7 @@ const SnowflakeCanvas = forwardRef(
         ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
         ctx.lineTo(centerX, centerY);
         ctx.closePath();
-        ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+        ctx.fillStyle = COLOR_CONFIG.hoverHighlight;
         ctx.fill();
         ctx.restore();
       }
@@ -173,29 +208,35 @@ const SnowflakeCanvas = forwardRef(
       const baseCtx = baseLayerRef.current.getContext("2d"); //获取基础层canvas上下文
       baseCtx.clearRect(0, 0, canvas.width, canvas.height); //清除基础层
 
-      // 1. 画7个同心圆
-      for (let i = 7; i >= 1; i--) {
+      // 1. 画同心圆
+      for (let i = DRAW_CONFIG.circleCount; i >= 1; i--) {
         baseCtx.beginPath();
-        baseCtx.arc(centerX, centerY, i * 17, 0, Math.PI * 2);
-        baseCtx.fillStyle = i % 2 === 0 ? "#424B58" : "#2D3642";
-        if (i === 1) baseCtx.fillStyle = "#424B58";
+        baseCtx.arc(
+          centerX,
+          centerY,
+          i * DRAW_CONFIG.circleRadiusMultiplier,
+          0,
+          Math.PI * 2
+        );
+        baseCtx.fillStyle =
+          i % 2 === 0 ? COLOR_CONFIG.circleEven : COLOR_CONFIG.circleOdd;
+        if (i === 1) baseCtx.fillStyle = COLOR_CONFIG.circleEven;
         baseCtx.fill();
       }
 
       // 2. 画参考线（从圆心到最外圈）
       for (let i = 0; i < numDimensions; i++) {
         const angle = (i * (Math.PI * 2)) / numDimensions - Math.PI / 2;
-        const startRadius = 34;
-        const startX = centerX + startRadius * Math.cos(angle);
-        const startY = centerY + startRadius * Math.sin(angle);
+        const startX = centerX + DRAW_CONFIG.startRadius * Math.cos(angle);
+        const startY = centerY + DRAW_CONFIG.startRadius * Math.sin(angle);
         const endX = centerX + outerRadius * Math.cos(angle);
         const endY = centerY + outerRadius * Math.sin(angle);
 
         baseCtx.beginPath();
         baseCtx.moveTo(startX, startY);
         baseCtx.lineTo(endX, endY);
-        baseCtx.strokeStyle = "#424B58";
-        baseCtx.lineWidth = 5;
+        baseCtx.strokeStyle = COLOR_CONFIG.referenceLine;
+        baseCtx.lineWidth = DRAW_CONFIG.lineWidth;
         baseCtx.stroke();
       }
 
@@ -206,7 +247,7 @@ const SnowflakeCanvas = forwardRef(
 
       for (let i = 0; i < numDimensions; i++) {
         const angle = (i * (Math.PI * 2)) / numDimensions - Math.PI / 2;
-        const radius = (scores[i] / 7) * outerRadius;
+        const radius = (scores[i] / DRAW_CONFIG.maxScore) * outerRadius;
         totalScore += scores[i];
         angles.push(angle);
         points.push({
@@ -224,8 +265,10 @@ const SnowflakeCanvas = forwardRef(
       // 6. 画旋转的标签
       for (let i = 0; i < numDimensions; i++) {
         const angle = angles[i];
-        const labelX = centerX + (outerRadius + 20) * Math.cos(angle);
-        const labelY = centerY + (outerRadius + 20) * Math.sin(angle);
+        const labelX =
+          centerX + (outerRadius + DRAW_CONFIG.labelOffset) * Math.cos(angle);
+        const labelY =
+          centerY + (outerRadius + DRAW_CONFIG.labelOffset) * Math.sin(angle);
 
         baseCtx.save();
         baseCtx.translate(labelX, labelY);
@@ -234,8 +277,8 @@ const SnowflakeCanvas = forwardRef(
           textAngle += Math.PI;
         }
         baseCtx.rotate(textAngle);
-        baseCtx.fillStyle = "white";
-        baseCtx.font = "12px Arial";
+        baseCtx.fillStyle = COLOR_CONFIG.labelColor;
+        baseCtx.font = STYLE_CONFIG.labelFont;
         baseCtx.textAlign = "center";
         baseCtx.textBaseline = "middle";
         baseCtx.fillText(dimensions[i], 0, 0);
@@ -252,7 +295,7 @@ const SnowflakeCanvas = forwardRef(
         // 绘制基础层
         ctx.drawImage(baseLayerRef.current, 0, 0);
 
-        const scaleFactor = 1.05; //放大 1.05 倍
+        const scaleFactor = DRAW_CONFIG.scaleFactor;
         const anglePerDimension = (Math.PI * 2) / numDimensions;
         const halfAngle = anglePerDimension / 2;
         const centerAngle = highlightIndex * anglePerDimension - Math.PI / 2;
@@ -264,7 +307,7 @@ const SnowflakeCanvas = forwardRef(
         ctx.save();
         ctx.beginPath();
         ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.fillStyle = COLOR_CONFIG.tocMask;
         ctx.fill();
         ctx.restore();
 
@@ -280,7 +323,7 @@ const SnowflakeCanvas = forwardRef(
         ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
         ctx.lineTo(centerX, centerY);
         ctx.closePath();
-        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        ctx.fillStyle = COLOR_CONFIG.tocMaskClear;
         ctx.fill();
         ctx.restore();
 
@@ -292,8 +335,12 @@ const SnowflakeCanvas = forwardRef(
 
         // 计算扇形中心点用于缩放变换
         const midAngle = (startAngle + endAngle) / 2;
-        const sectionCenterX = centerX + outerRadius * 0.5 * Math.cos(midAngle);
-        const sectionCenterY = centerY + outerRadius * 0.5 * Math.sin(midAngle);
+        const sectionCenterX =
+          centerX +
+          outerRadius * DRAW_CONFIG.sectorMidRadiusFactor * Math.cos(midAngle);
+        const sectionCenterY =
+          centerY +
+          outerRadius * DRAW_CONFIG.sectorMidRadiusFactor * Math.sin(midAngle);
 
         // 创建扇形裁剪路径
         offCtx.save();
@@ -315,28 +362,34 @@ const SnowflakeCanvas = forwardRef(
         offCtx.translate(-sectionCenterX, -sectionCenterY);
 
         // 绘制同心圆（会被缩放和裁剪）
-        for (let i = 7; i >= 1; i--) {
+        for (let i = DRAW_CONFIG.circleCount; i >= 1; i--) {
           offCtx.beginPath();
-          offCtx.arc(centerX, centerY, i * 17, 0, Math.PI * 2);
-          offCtx.fillStyle = i % 2 === 0 ? "#424B58" : "#2D3642";
-          if (i === 1) offCtx.fillStyle = "#424B58";
+          offCtx.arc(
+            centerX,
+            centerY,
+            i * DRAW_CONFIG.circleRadiusMultiplier,
+            0,
+            Math.PI * 2
+          );
+          offCtx.fillStyle =
+            i % 2 === 0 ? COLOR_CONFIG.circleEven : COLOR_CONFIG.circleOdd;
+          if (i === 1) offCtx.fillStyle = COLOR_CONFIG.circleEven;
           offCtx.fill();
         }
 
         // 绘制参考线（会被缩放和裁剪）
         for (let i = 0; i < numDimensions; i++) {
           const angle = (i * (Math.PI * 2)) / numDimensions - Math.PI / 2;
-          const startRadius = 34;
-          const startX = centerX + startRadius * Math.cos(angle);
-          const startY = centerY + startRadius * Math.sin(angle);
+          const startX = centerX + DRAW_CONFIG.startRadius * Math.cos(angle);
+          const startY = centerY + DRAW_CONFIG.startRadius * Math.sin(angle);
           const endX = centerX + outerRadius * Math.cos(angle);
           const endY = centerY + outerRadius * Math.sin(angle);
 
           offCtx.beginPath();
           offCtx.moveTo(startX, startY);
           offCtx.lineTo(endX, endY);
-          offCtx.strokeStyle = "#424B58";
-          offCtx.lineWidth = 5;
+          offCtx.strokeStyle = COLOR_CONFIG.referenceLine;
+          offCtx.lineWidth = DRAW_CONFIG.lineWidth;
           offCtx.stroke();
         }
 
@@ -354,9 +407,10 @@ const SnowflakeCanvas = forwardRef(
       renderInteractionLayer();
 
       // 清理函数：组件卸载时清空 Canvas
+      const currentCanvas = canvas; // 复制 ref 到局部变量
       return () => {
-        if (canvasRef.current) {
-          const ctx = canvasRef.current.getContext("2d");
+        if (currentCanvas) {
+          const ctx = currentCanvas.getContext("2d");
           ctx.clearRect(
             0,
             0,
@@ -374,8 +428,8 @@ const SnowflakeCanvas = forwardRef(
     return (
       <canvas
         ref={canvasRef}
-        width={330}
-        height={330}
+        width={CANVAS_CONFIG.canvasWidth}
+        height={CANVAS_CONFIG.canvasHeight}
         style={{ display: "block" }}
       />
     );
