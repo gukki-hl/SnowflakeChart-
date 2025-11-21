@@ -1,5 +1,7 @@
 import { HStack, Text, Box, VStack } from "@chakra-ui/react";
 import Sliders from "./Sliders";
+import { memo } from "react";
+
 const ScoresRadio = ({ dimensions, scores, onScoreChange }) => {
   return (
     <>
@@ -32,4 +34,10 @@ const ScoresRadio = ({ dimensions, scores, onScoreChange }) => {
   );
 };
 
-export default ScoresRadio;
+// 优化：使用 memo 记忆化组件，避免不必要的重渲染
+export default memo(ScoresRadio, (prevProps, nextProps) => {
+  return (
+    prevProps.dimensions === nextProps.dimensions &&
+    JSON.stringify(prevProps.scores) === JSON.stringify(nextProps.scores)
+  );
+});

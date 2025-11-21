@@ -4,6 +4,7 @@ import {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  memo,
 } from "react";
 
 // 计算三次贝塞尔曲线的两个控制点
@@ -370,4 +371,13 @@ const SnowflakeCanvas = forwardRef(
 
 SnowflakeCanvas.displayName = "SnowflakeCanvas";
 
-export default SnowflakeCanvas;
+// 优化：使用 memo 记忆化组件，避免不必要的重渲染
+export default memo(
+  SnowflakeCanvas,
+  (prevProps, nextProps) =>
+    prevProps.dimensions === nextProps.dimensions &&
+    JSON.stringify(prevProps.scores) === JSON.stringify(nextProps.scores) &&
+    prevProps.mode === nextProps.mode &&
+    prevProps.highlightSection === nextProps.highlightSection &&
+    prevProps.hoveredSection === nextProps.hoveredSection
+);

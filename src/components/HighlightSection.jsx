@@ -1,6 +1,10 @@
 import { HStack, Text, Box, RadioGroup } from "@chakra-ui/react";
-
-const HighlightSection = ({ dimensions, highlightSection, onHighlightChange }) => {
+import { memo } from "react";
+const HighlightSection = ({
+  dimensions,
+  highlightSection,
+  onHighlightChange,
+}) => {
   const option = ["NONE", ...dimensions];
   return (
     <Box
@@ -57,4 +61,10 @@ const HighlightSection = ({ dimensions, highlightSection, onHighlightChange }) =
   );
 };
 
-export default HighlightSection;
+// 优化：使用 memo 记忆化组件，避免不必要的重渲染
+export default memo(HighlightSection, (prevProps, nextProps) => {
+  return (
+    prevProps.dimensions === nextProps.dimensions &&
+    prevProps.highlightSection === nextProps.highlightSection
+  );
+});

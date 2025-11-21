@@ -226,12 +226,12 @@ const SnowflakeTooltip = ({
     >
       <Box display="inline-block">
         <SnowflakeCanvas
-          ref={canvasRef}
-          dimensions={dimensions}
-          scores={scores}
-          mode={mode}
-          highlightSection={highlightSection}
-          hoveredSection={hoveredSection}
+          ref={canvasRef} //让父组件可以通过 ref 访问到 SnowflakeCanvas 内部的 canvas 元素，方便实现如坐标映射、悬浮事件处理等交互。
+          dimensions={dimensions} //维度名称
+          scores={scores} //维度分数
+          mode={mode} //模式
+          highlightSection={highlightSection} //高亮维度
+          hoveredSection={hoveredSection} //悬浮的维度索引
         />
       </Box>
     </TooltipMessage>

@@ -1,4 +1,5 @@
 import { Box, VStack, Text, Button } from "@chakra-ui/react";
+import { memo } from "react";
 import ScoresRadio from "./ScoresRadio";
 import HighlightSection from "./HighlightSection";
 const ControlPanel = ({
@@ -57,4 +58,11 @@ const ControlPanel = ({
   );
 };
 
-export default ControlPanel;
+// 优化：使用 memo 记忆化组件，避免不必要的重渲染
+export default memo(ControlPanel, (prevProps, nextProps) => {
+  return (
+    prevProps.dimensions === nextProps.dimensions &&
+    JSON.stringify(prevProps.scores) === JSON.stringify(nextProps.scores) &&
+    prevProps.highlightSection === nextProps.highlightSection
+  );
+});

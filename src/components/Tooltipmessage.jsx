@@ -1,6 +1,5 @@
-import { HStack, Text, Box } from "@chakra-ui/react";
-import { Tooltip } from "@chakra-ui/react";
-
+import { HStack, Text, Box, Tooltip } from "@chakra-ui/react";
+import { memo } from "react";
 const TooltipContent = ({
   score,
   dimension,
@@ -86,6 +85,18 @@ const TooltipContent = ({
   );
 };
 
+// 优化：使用 memo 记忆化组件，避免不必要的重渲染
+const MemoizedTooltipContent = memo(
+  TooltipContent,
+  (prevProps, nextProps) =>
+    prevProps.score === nextProps.score &&
+    prevProps.dimension === nextProps.dimension &&
+    prevProps.description === nextProps.description &&
+    prevProps.checksCount === nextProps.checksCount &&
+    prevProps.totalChecks === nextProps.totalChecks &&
+    JSON.stringify(prevProps.checks) === JSON.stringify(nextProps.checks)
+);
+
 const TooltipMessage = ({
   children,
   score,
@@ -121,7 +132,7 @@ const TooltipMessage = ({
               }}
             />
           </Tooltip.Arrow>
-          <TooltipContent
+          <MemoizedTooltipContent
             score={score}
             dimension={dimension}
             description={description}
